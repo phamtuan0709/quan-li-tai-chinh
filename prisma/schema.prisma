@@ -1,0 +1,110 @@
+// Prisma Schema for Expense Tracker
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  image         String?
+  createdAt     DateTime       @default(now())
+  transactions  Transaction[]
+  conversations Conversation[]
+  categories    Category[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // "Trà đá", "Ăn uống", etc.
+  icon        String?  // emoji icon
+  color       String?  // hex color for badge
+  isDefault   Boolean  @default(false) // System default categories
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Training patterns learned from user labels
+  patterns    CategoryPattern[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model CategoryPattern {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  // Pattern data for ML matching
+  keyword     String   // normalized keyword/phrase
+  weight      Float    @default(1.0) // importance weight
+  occurrences Int      @default(1)   // how many times this pattern matched
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([categoryId, keyword])
+  @@index([categoryId])
+  @@index([keyword])
+}
+
+model Transaction {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // From BIDV email
+  transactionType    String   // "Chuyển tiền nội bộ BIDV", etc.
+  transactionTime    DateTime
+  referenceNumber    String   @unique
+  debitAccount       String
+  amount             Float
+  transactionFee     Float    @default(0)
+  beneficiaryName    String?
+  beneficiaryAccount String?
+  beneficiaryBank    String?
+  remark             String?
+  channel            String?
+  
+  // Category - can be user-labeled or AI-suggested
+  category           String?  // Category name
+  isUserLabeled      Boolean  @default(false) // true if user manually labeled
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([transactionTime])
+  @@index([category])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String    @default("New Chat")
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // "user" | "assistant"
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
