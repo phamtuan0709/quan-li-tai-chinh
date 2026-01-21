@@ -43,7 +43,7 @@ export async function GET() {
         if (categories.length === 0) {
             await prisma.category.createMany({
                 data: DEFAULT_CATEGORIES.map(cat => ({
-                    userId: session.user.id,
+                    userId: session.user.id!,
                     name: cat.name,
                     icon: cat.icon,
                     color: cat.color,

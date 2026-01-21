@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
 
         // Build conversation history for AI
         const history = conversation.messages.map(m => ({
-            role: m.role as 'user' | 'model',
-            parts: [{ text: m.content }],
+            role: m.role === 'assistant' ? 'assistant' as const : 'user' as const,
+            content: m.content,
         }))
 
         // Get AI response
